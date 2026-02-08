@@ -1,9 +1,14 @@
-import { Button } from "@/components/ui/button"
+import { Route, Routes } from "react-router-dom"
+import { Home, Login, Profile } from "./pages"
 
 function App() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center">
-      <Button>Click me</Button>
+    <div className="">
+      <Routes>
+        <Route path="/" element= {<Home />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
     </div>
   )
 }
