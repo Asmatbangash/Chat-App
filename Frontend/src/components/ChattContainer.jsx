@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { assets } from "../assets/assets";
 
 const messages = [
   { id: 1, text: "Hello! 👋", sender: "other" },
@@ -11,7 +12,8 @@ const messages = [
   { id: 3, text: "I’m good! Working on the chat app 😄", sender: "other" },
 ];
 
-function ChattContainer() {
+function ChattContainer({selectedUser, setSelectedUser}) {
+  console.log(selectedUser)
   const bottomRef = useRef(null);
 
   // Auto-scroll to last message
@@ -19,22 +21,26 @@ function ChattContainer() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  return (
+  return selectedUser ? (
     <div className="flex flex-col h-screen">
-      {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b shrink-0">
         <Avatar>
           <AvatarImage src="" />
-          <AvatarFallback>A</AvatarFallback>
+          <AvatarFallback>
+            {selectedUser.name
+              .split(" ")
+              .map(word => word[0])
+              .join("")
+              .toUpperCase()}
+          </AvatarFallback>
         </Avatar>
 
         <div>
-          <p className="font-semibold text-sm sm:text-base">Ali Khan</p>
-          <p className="text-xs sm:text-sm text-green-500">Online</p>
+          <p className="font-semibold text-sm sm:text-base">{selectedUser.name}</p>
+          {selectedUser.online === true ?<p className="text-xs sm:text-sm text-green-500">online</p> : <p className="text-xs sm:text-sm text-gray-500">offline</p>}
         </div>
       </div>
 
-      {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="flex flex-col gap-2">
           {messages.map((msg) => (
@@ -50,12 +56,10 @@ function ChattContainer() {
               {msg.text}
             </div>
           ))}
-          {/* Scroll target */}
           <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
-      {/* Input — ALWAYS AT BOTTOM */}
       <div className="fixed bottom-0 bg-background p-4 border-t flex items-center gap-2">
         <Input placeholder="Type a message..." />
         <Button size="icon">
@@ -63,7 +67,12 @@ function ChattContainer() {
         </Button>
       </div>
     </div>
-  );
+  ) :(
+    <div className="flex justify-center items-center h-screen">
+      <img className="w-15 h-15 max-sm:w-10 max-sm:h-10" src={assets.logo} alt="logo"  />
+      <p className="font-bold text-2xl max-sm:text-sm">Chat anytime, anywhare!</p>
+    </div>
+  )
 }
 
 export default ChattContainer;

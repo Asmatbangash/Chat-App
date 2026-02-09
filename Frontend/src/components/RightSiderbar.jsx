@@ -1,12 +1,11 @@
-import React from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import React from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
-function RightSidebar({ isOpen, onClose }) {
-  return (
+function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
+  return selectedUser ? (
     <>
-      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -14,7 +13,6 @@ function RightSidebar({ isOpen, onClose }) {
         ></div>
       )}
 
-      {/* Sidebar */}
       <div
         className={`
           fixed top-0 right-0 h-full w-72 bg-background border-l shadow-md z-50
@@ -23,20 +21,28 @@ function RightSidebar({ isOpen, onClose }) {
           lg:static lg:translate-x-0
         `}
       >
-        {/* User Profile */}
         <div className="flex flex-col items-center text-center gap-2 p-4">
           <Avatar className="h-20 w-20">
             <AvatarImage src="" />
-            <AvatarFallback>AK</AvatarFallback>
+            <AvatarFallback>
+              {selectedUser.name
+                .split(" ")
+                .map((word) => word[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
           </Avatar>
 
-          <h3 className="font-semibold text-lg">Ali Khan</h3>
-          <p className="text-sm text-green-500">Online</p>
+          <h3 className="font-semibold text-lg">{selectedUser.name}</h3>
+          {selectedUser.online === true ? (
+            <p className="text-xs sm:text-sm text-green-500">online</p>
+          ) : (
+            <p className="text-xs sm:text-sm text-gray-500">offline</p>
+          )}
         </div>
 
         <Separator className="my-4" />
 
-        {/* About */}
         <div className="p-4">
           <h4 className="text-sm font-semibold mb-2">About</h4>
           <p className="text-sm text-muted-foreground">
@@ -45,8 +51,6 @@ function RightSidebar({ isOpen, onClose }) {
         </div>
 
         <Separator className="my-4" />
-
-        {/* Media */}
         <div className="flex-1 p-4">
           <h4 className="text-sm font-semibold mb-2">Media</h4>
 
@@ -57,7 +61,6 @@ function RightSidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="p-4 mt-4 space-y-2">
           <Button variant="outline" className="w-full">
             Mute Notifications
@@ -68,7 +71,7 @@ function RightSidebar({ isOpen, onClose }) {
         </div>
       </div>
     </>
-  )
+  ) : null;
 }
 
-export default RightSidebar
+export default RightSidebar;

@@ -7,6 +7,7 @@ import { RightSiderbar, ChattContainer, Sidebar } from "../components"
 function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isRightOpen, setIsRightOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState()
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
@@ -31,16 +32,11 @@ function Home() {
       </div>
 
       <div className="flex flex-1 h-full relative">
-        {/* Sidebar (Left) */}
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-        {/* ChatContainer (Center) */}
-        <div className="flex-1 h-full min-h-0 overflow-hidden">
-          <ChattContainer />
+        <Sidebar selectedUser={selectedUser} setSelectedUser={setSelectedUser} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <div className="flex-1 h-full min-h-screen overflow-hidden">
+          <ChattContainer selectedUser={selectedUser} setSelectedUser={setSelectedUser}/>
         </div>
-
-        {/* RightSidebar (Right) */}
-        <RightSiderbar isOpen={isRightOpen} onClose={() => setIsRightOpen(false)} />
+        <RightSiderbar isOpen={isRightOpen} onClose={() => setIsRightOpen(false)} selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
       </div>
     </div>
   )
