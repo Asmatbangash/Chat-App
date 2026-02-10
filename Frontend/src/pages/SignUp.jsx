@@ -11,16 +11,19 @@ import {
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 
-function Login() {
+function SignUp() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm();
 
+  const password = watch("password");
+
   const onSubmit = async (data) => {
-    console.log("Login Data:", data);
-    // call your API here
+    console.log("Signup Data:", data);
+    // call signup API here
   };
 
   return (
@@ -28,12 +31,27 @@ function Login() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center text-2xl">
-            Welcome Back 👋
+            Create Account 🚀
           </CardTitle>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Full Name</Label>
+              <Input
+                placeholder="Enter your name"
+                {...register("name", {
+                  required: "Name is required",
+                })}
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-1">
               <Label>Email</Label>
               <Input
@@ -58,7 +76,7 @@ function Login() {
               <Label>Password</Label>
               <Input
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Create a password"
                 {...register("password", {
                   required: "Password is required",
                   minLength: {
@@ -73,32 +91,21 @@ function Login() {
                 </p>
               )}
             </div>
-
-            <div className="text-right">
-              <a
-                href="#"
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </a>
-            </div>
-
             <Button
               type="submit"
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Logging in..." : "Login"}
+              {isSubmitting ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
-
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Don’t have an account?{" "}
-            <Link 
-              to="/sign-up"
+            Already have an account?{" "}
+            <Link
+              to="/login"
               className="text-primary font-medium hover:underline"
             >
-              Sign up
+              Login
             </Link>
           </p>
         </CardContent>
@@ -107,4 +114,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default SignUp;

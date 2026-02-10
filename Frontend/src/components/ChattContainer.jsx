@@ -68,8 +68,8 @@ function ChattContainer({selectedUser, setSelectedUser}) {
       </div>
     </div>
   ) :(
-    <div className="flex justify-center items-center h-screen">
-      <img className="w-15 h-15 max-sm:w-10 max-sm:h-10" src={assets.logo} alt="logo"  />
+    <div className="flex flex-col justify-center items-center h-screen">
+      <img className="w-25 h-25 max-sm:w-15 max-sm:h-15" src={assets.logo} alt="logo"  />
       <p className="font-bold text-2xl max-sm:text-sm">Chat anytime, anywhare!</p>
     </div>
   )
