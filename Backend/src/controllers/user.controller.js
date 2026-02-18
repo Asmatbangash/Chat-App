@@ -7,12 +7,16 @@ const SignUp = async (req, res) => {
   const { FullName, email, password, bio } = req.body;
   try {
     if (!FullName || !email || !password || !bio) {
-      return res.json({ success: false, message: "missing details" });
+      return res
+        .status(400)
+        .json({ success: false, message: "missing details" });
     }
 
     const user = await User.findOne({ email });
     if (user) {
-      return res.json({ success: false, message: "user already exists!" });
+      return res
+        .status(409)
+        .json({ success: false, message: "user already exists!" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -21,13 +25,13 @@ const SignUp = async (req, res) => {
     const newUser = await User.create({
       FullName,
       email,
-      password:hashPassword,
+      password: hashPassword,
       bio,
     });
 
     const token = generateToken(newUser._id);
 
-    res.json({
+    res.status(201).json({
       success: true,
       userData: newUser,
       token,
@@ -35,7 +39,10 @@ const SignUp = async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -43,18 +50,20 @@ const login = async (req, res) => {
   const { email, password } = req.body;
   try {
     if (!email || !password) {
-      return res.json({ success: false, message: "missing details" });
+      return res
+        .status(400)
+        .json({ success: false, message: "missing details" });
     }
     const userData = await User.findOne({ email });
 
     const isPasswordCorrect = bcrypt.compare(password, userData.password);
 
     if (!isPasswordCorrect) {
-      res.json({ success: false, message: "invalid credintail!" });
+      res.status(404).json({ success: false, message: "invalid credintail!" });
     }
     const token = generateToken(userData._id);
 
-    res.json({
+    res.status(200).json({
       success: true,
       userData,
       token,
@@ -62,32 +71,51 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const checkAuth = async(req, res) =>{
-  res.json({success: false, user: req.user })
-}
+const checkAuth = async (req, res) => {
+  await res.status(404).json({ success: false, user: req.user });
+};
 
-const updateUserProfile = async(req, res) =>{
-  const {profilePic, FullName, bio} = req.body
+const updateUserProfile = async (req, res) => {
+  const { profilePic, FullName, bio } = req.body;
   try {
-    const userId = req.user._id
+    const userId = req.user._id;
     let updateUser;
-    if(!profilePic){
-      updateUser = await User.findByIdAndUpdate(userId, {FullName, bio}, {new:true})
-    }else{
-     const uploadProfilePic = await cloudinary.uploader.upload(profilePic)
-     updateUser = await User.findByIdAndUpdate(userId, {profilePic: uploadProfilePic.secure_url, FullName, bio}, {new: true})
+    if (!profilePic) {
+      updateUser = await User.findByIdAndUpdate(
+        userId,
+        { FullName, bio },
+        { new: true },
+      );
+    } else {
+      const uploadProfilePic = await cloudinary.uploader.upload(profilePic);
+      updateUser = await User.findByIdAndUpdate(
+        userId,
+        { profilePic: uploadProfilePic.secure_url, FullName, bio },
+        { new: true },
+      );
     }
 
-    res.json({success: true, user: updateUser, messsage: "profile update successfully!"})
-
+    res
+      .status(200)
+      .json({
+        success: true,
+        user: updateUser,
+        messsage: "profile update successfully!",
+      });
   } catch (error) {
-    console.log(error.message)
-    res.json({success: false, message: error.message})
+    console.log(error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-}
+};
 
 export { SignUp, login, checkAuth, updateUserProfile };
