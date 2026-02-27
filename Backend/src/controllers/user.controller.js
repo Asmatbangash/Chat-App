@@ -56,7 +56,7 @@ const login = async (req, res) => {
     }
     const userData = await User.findOne({ email });
 
-    const isPasswordCorrect = bcrypt.compare(password, userData.password);
+    const isPasswordCorrect = await bcrypt.compare(password, userData.password);
 
     if (!isPasswordCorrect) {
       res.status(404).json({ success: false, message: "invalid credintail!" });
@@ -79,7 +79,10 @@ const login = async (req, res) => {
 };
 
 const checkAuth = async (req, res) => {
-  await res.status(404).json({ success: false, user: req.user });
+  res.status(200).json({
+    success: true,
+    user: req.user
+  });
 };
 
 const updateUserProfile = async (req, res) => {

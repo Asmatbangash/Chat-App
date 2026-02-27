@@ -5,12 +5,15 @@ const messageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    recievedId: {
+    receiverId: {
         type: mongoose.Schema.Types.ObjectId,
         ref:"User"
     },
     text: {
         type: String,
+    },
+    image:{
+         type: String
     },
     seen: {
         type: Boolean,

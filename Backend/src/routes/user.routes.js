@@ -2,12 +2,12 @@ import express from 'express'
 import { checkAuth, login, SignUp, updateUserProfile } from '../controllers/user.controller.js'
 import protectRoute from '../middleware/auth.middleware.js'
 
-const router = express.Router()
+const userRouter = express.Router()
 
-router.post("/signUp", SignUp)
-router.post("/login", login)
-router.get("/checkAuth",protectRoute, checkAuth)
-router.patch("/update-profile", protectRoute, updateUserProfile)
+userRouter.post("/signUp", SignUp)
+userRouter.post("/login", login)
+userRouter.get("/checkAuth",protectRoute, checkAuth)
+userRouter.patch("/update-profile", protectRoute, updateUserProfile)
 
 
-export default router
+export default userRouter
