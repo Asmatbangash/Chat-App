@@ -1,35 +1,45 @@
-import React from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [apiError, setApiError] = useState("");
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm();
 
-  const onSubmit = async (data) => {
-    console.log("Login Data:", data);
-    // call your API here
+  const onSubmit = async (formData) => {
+    setApiError("");
+
+    try {
+      const { data } = await api.post("/user/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      login(data);
+      navigate("/", { replace: true });
+    } catch (error) {
+      setApiError(error?.response?.data?.message || "Login failed. Please try again.");
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">
-            Welcome Back 👋
-          </CardTitle>
+          <CardTitle className="text-center text-2xl">Welcome Back</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -48,9 +58,7 @@ function Login() {
                 })}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">
-                  {errors.email.message}
-                </p>
+                <p className="text-sm text-destructive">{errors.email.message}</p>
               )}
             </div>
 
@@ -68,36 +76,20 @@ function Login() {
                 })}
               />
               {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password.message}
-                </p>
+                <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
             </div>
 
-            <div className="text-right">
-              <a
-                href="#"
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </a>
-            </div>
+            {apiError ? <p className="text-sm text-destructive">{apiError}</p> : null}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Logging in..." : "Login"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Don’t have an account?{" "}
-            <Link 
-              to="/sign-up"
-              className="text-primary font-medium hover:underline"
-            >
+            Don&apos;t have an account?{" "}
+            <Link to="/sign-up" className="text-primary font-medium hover:underline">
               Sign up
             </Link>
           </p>

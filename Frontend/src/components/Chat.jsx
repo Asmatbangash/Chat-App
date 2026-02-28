@@ -1,0 +1,204 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { api } from "@/lib/api";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/context/AuthContext";
+import { assets } from "@/assets/assets";
+
+const appendUniqueMessage = (currentMessages, incomingMessage) => {
+  const exists = currentMessages.some((msg) => msg._id === incomingMessage._id);
+  return exists ? currentMessages : [...currentMessages, incomingMessage];
+};
+
+function Chat({ selectedUser }) {
+  const { user } = useAuth();
+  const { socket, onlineUsers } = useSocket();
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+
+  const isSelectedUserOnline = useMemo(
+    () => onlineUsers.includes(String(selectedUser?._id)),
+    [onlineUsers, selectedUser?._id],
+  );
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedUser?._id) {
+        setMessages([]);
+        return;
+      }
+
+      setLoadingMessages(true);
+      try {
+        const { data } = await api.get(`/messages/${selectedUser._id}`);
+        setMessages(Array.isArray(data?.messages) ? data.messages : []);
+      } catch (error) {
+        console.error("Failed to fetch messages:", error?.response?.data || error);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedUser?._id]);
+
+  useEffect(() => {
+    if (!socket || !selectedUser?._id || !user?._id) {
+      return;
+    }
+
+    const handleIncomingMessage = (incomingMessage) => {
+      const fromSelectedUser =
+        String(incomingMessage?.senderId) === String(selectedUser._id);
+      const toCurrentUser = String(incomingMessage?.receiverId) === String(user._id);
+
+      if (!fromSelectedUser || !toCurrentUser) {
+        return;
+      }
+
+      setMessages((prev) => appendUniqueMessage(prev, incomingMessage));
+    };
+
+    socket.on("newMessage", handleIncomingMessage);
+
+    return () => {
+      socket.off("newMessage", handleIncomingMessage);
+    };
+  }, [socket, selectedUser?._id, user?._id]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (event) => {
+    event.preventDefault();
+
+    const trimmedMessage = messageText.trim();
+    if (!trimmedMessage || !selectedUser?._id || !user?._id || sending) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      // Emit socket event for instant cross-client delivery.
+      socket?.emit("sendMessage", {
+        senderId: user._id,
+        receiverId: selectedUser._id,
+        text: trimmedMessage,
+      });
+
+      // Persist message through REST API.
+      const { data } = await api.post(`/messages/send-message/${selectedUser._id}`, {
+        text: trimmedMessage,
+      });
+
+      if (data?.message) {
+        setMessages((prev) => appendUniqueMessage(prev, data.message));
+      }
+
+      setMessageText("");
+    } catch (error) {
+      console.error("Failed to send message:", error?.response?.data || error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!selectedUser) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <img
+          className="w-25 h-25 max-sm:w-15 max-sm:h-15"
+          src={assets.logo}
+          alt="logo"
+        />
+        <p className="font-bold text-2xl max-sm:text-sm">Chat anytime, anywhere!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen">
+      <div className="flex items-center gap-3 p-4 border-b shrink-0">
+        <Avatar>
+          <AvatarImage src={selectedUser.profilePic || ""} />
+          <AvatarFallback>
+            {(selectedUser.FullName || "U")
+              .split(" ")
+              .map((word) => word[0])
+              .join("")
+              .toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+
+        <div>
+          <p className="font-semibold text-sm sm:text-base">{selectedUser.FullName}</p>
+          {isSelectedUserOnline ? (
+            <p className="text-xs sm:text-sm text-green-500">online</p>
+          ) : (
+            <p className="text-xs sm:text-sm text-gray-500">offline</p>
+          )}
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 p-4 pb-24">
+        <div className="flex flex-col gap-2">
+          {loadingMessages && (
+            <p className="text-sm text-muted-foreground">Loading messages...</p>
+          )}
+
+          {!loadingMessages && messages.length === 0 && (
+            <p className="text-sm text-muted-foreground">No messages yet.</p>
+          )}
+
+          {messages.map((msg) => {
+            const isMe = String(msg.senderId) === String(user?._id);
+            return (
+              <div
+                key={msg._id || `${msg.senderId}-${msg.createdAt}`}
+                className={`px-3 py-2 rounded-lg text-sm break-words ${
+                  isMe
+                    ? "self-end bg-primary text-primary-foreground max-w-[80%] sm:max-w-[60%]"
+                    : "self-start bg-muted max-w-[80%] sm:max-w-[60%]"
+                }`}
+              >
+                {msg.image ? (
+                  <img
+                    src={msg.image}
+                    alt="message"
+                    className="max-h-52 w-auto rounded-md mb-2"
+                  />
+                ) : null}
+                {msg.text}
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
+
+      <form
+        onSubmit={handleSendMessage}
+        className="fixed bottom-0 left-0 right-0 md:left-64 lg:right-72 bg-background p-4 border-t flex items-center gap-2"
+      >
+        <Input
+          placeholder="Type a message..."
+          value={messageText}
+          onChange={(event) => setMessageText(event.target.value)}
+        />
+        <Button size="icon" type="submit" disabled={sending}>
+          <Send className="h-4 w-4" />
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+export default Chat;

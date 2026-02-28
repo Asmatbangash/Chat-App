@@ -1,16 +1,24 @@
-import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useSocket } from "@/hooks/useSocket";
 
-function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
-  return selectedUser ? (
+function RightSidebar({ isOpen, onClose, selectedUser }) {
+  const { onlineUsers } = useSocket();
+
+  if (!selectedUser) {
+    return null;
+  }
+
+  const isOnline = onlineUsers.includes(String(selectedUser._id));
+
+  return (
     <>
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
           onClick={onClose}
-        ></div>
+        />
       )}
 
       <div
@@ -23,9 +31,9 @@ function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
       >
         <div className="flex flex-col items-center text-center gap-2 p-4">
           <Avatar className="h-20 w-20">
-            <AvatarImage src="" />
+            <AvatarImage src={selectedUser.profilePic || ""} />
             <AvatarFallback>
-              {selectedUser.name
+              {(selectedUser.FullName || "U")
                 .split(" ")
                 .map((word) => word[0])
                 .join("")
@@ -33,8 +41,8 @@ function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
             </AvatarFallback>
           </Avatar>
 
-          <h3 className="font-semibold text-lg">{selectedUser.name}</h3>
-          {selectedUser.online === true ? (
+          <h3 className="font-semibold text-lg">{selectedUser.FullName}</h3>
+          {isOnline ? (
             <p className="text-xs sm:text-sm text-green-500">online</p>
           ) : (
             <p className="text-xs sm:text-sm text-gray-500">offline</p>
@@ -46,7 +54,7 @@ function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
         <div className="p-4">
           <h4 className="text-sm font-semibold mb-2">About</h4>
           <p className="text-sm text-muted-foreground">
-            Building a real-time chat app using React & Socket.io 🚀
+            {selectedUser.bio || "No bio available"}
           </p>
         </div>
 
@@ -71,7 +79,7 @@ function RightSidebar({ isOpen, onClose, selectedUser, setSelectedUser }) {
         </div>
       </div>
     </>
-  ) : null;
+  );
 }
 
 export default RightSidebar;

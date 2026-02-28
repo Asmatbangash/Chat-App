@@ -1,9 +1,5 @@
 import Sidebar from "./Sidebar";
 import RightSiderbar from "./RightSiderbar";
-import ChattContainer from "./ChattContainer";
+import Chat from "./Chat";
 
-export {
-    Sidebar,
-    RightSiderbar,
-    ChattContainer
-}
+export { Sidebar, RightSiderbar, Chat };
