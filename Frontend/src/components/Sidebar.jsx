@@ -10,10 +10,11 @@ import { useNavigate } from "react-router-dom";
 
 function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
   const navigate = useNavigate();
-  const { onlineUsers } = useSocket();
+  const { onlineUsers, socket } = useSocket();
   const { logout } = useAuth();
 
   const [users, setUsers] = useState([]);
+  const [unSeenMessages, setUnSeenMessages] = useState({});
   const [search, setSearch] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -23,6 +24,7 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
       try {
         const { data } = await api.get("/messages/users");
         setUsers(Array.isArray(data?.users) ? data.users : []);
+        setUnSeenMessages(data?.unSeenMessages || {});
       } catch (error) {
         console.error("Failed to load users:", error?.response?.data || error);
       } finally {
@@ -32,6 +34,32 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
 
     fetchSidebarUsers();
   }, []);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const handleIncomingMessage = (incomingMessage) => {
+      const senderId = String(incomingMessage?.senderId);
+
+      // If that chat is already open, don't increment unread counter.
+      if (String(selectedUser?._id) === senderId) {
+        return;
+      }
+
+      setUnSeenMessages((prev) => ({
+        ...prev,
+        [senderId]: (prev[senderId] || 0) + 1,
+      }));
+    };
+
+    socket.on("newMessage", handleIncomingMessage);
+
+    return () => {
+      socket.off("newMessage", handleIncomingMessage);
+    };
+  }, [socket, selectedUser?._id]);
 
   const filteredUsers = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -93,6 +121,7 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
           {filteredUsers.map((user) => {
             const isOnline = onlineUsers.includes(String(user._id));
             const isSelected = selectedUser?._id === user._id;
+            const unreadCount = unSeenMessages[user._id] || 0;
 
             return (
               <div
@@ -102,6 +131,10 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
                 }`}
                 onClick={() => {
                   setSelectedUser(user);
+                  setUnSeenMessages((prev) => ({
+                    ...prev,
+                    [user._id]: 0,
+                  }));
                   onClose?.();
                 }}
               >
@@ -124,6 +157,12 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
                     {isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
+
+                {unreadCount > 0 && (
+                  <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </div>
             );
           })}

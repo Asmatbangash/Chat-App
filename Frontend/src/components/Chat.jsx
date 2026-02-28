@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Check, CheckCheck, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
@@ -54,7 +54,7 @@ function Chat({ selectedUser }) {
       return;
     }
 
-    const handleIncomingMessage = (incomingMessage) => {
+    const handleIncomingMessage = async (incomingMessage) => {
       const fromSelectedUser =
         String(incomingMessage?.senderId) === String(selectedUser._id);
       const toCurrentUser = String(incomingMessage?.receiverId) === String(user._id);
@@ -64,12 +64,37 @@ function Chat({ selectedUser }) {
       }
 
       setMessages((prev) => appendUniqueMessage(prev, incomingMessage));
+
+      // Mark as seen immediately when user is already in this chat.
+      try {
+        await api.patch(`/messages/mark/${incomingMessage._id}`);
+      } catch (error) {
+        console.error("Failed to mark incoming message as seen:", error);
+      }
+    };
+
+    const handleMessagesSeen = ({ messageIds = [] }) => {
+      if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        return;
+      }
+
+      const seenSet = new Set(messageIds.map((id) => String(id)));
+
+      setMessages((prev) =>
+        prev.map((message) =>
+          seenSet.has(String(message._id))
+            ? { ...message, seen: true }
+            : message,
+        ),
+      );
     };
 
     socket.on("newMessage", handleIncomingMessage);
+    socket.on("messagesSeen", handleMessagesSeen);
 
     return () => {
       socket.off("newMessage", handleIncomingMessage);
+      socket.off("messagesSeen", handleMessagesSeen);
     };
   }, [socket, selectedUser?._id, user?._id]);
 
@@ -177,6 +202,16 @@ function Chat({ selectedUser }) {
                   />
                 ) : null}
                 {msg.text}
+
+                {isMe && (
+                  <span className="mt-1 flex justify-end">
+                    {msg.seen ? (
+                      <CheckCheck className="h-4 w-4 text-sky-500" />
+                    ) : (
+                      <Check className="h-4 w-4 text-gray-400" />
+                    )}
+                  </span>
+                )}
               </div>
             );
           })}
