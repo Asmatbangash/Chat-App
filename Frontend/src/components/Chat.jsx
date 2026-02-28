@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { assets } from "@/assets/assets";
 
 const appendUniqueMessage = (currentMessages, incomingMessage) => {
+  // Prevent duplicate entries when the same message arrives via REST/socket.
   const exists = currentMessages.some((msg) => msg._id === incomingMessage._id);
   return exists ? currentMessages : [...currentMessages, incomingMessage];
 };
@@ -80,6 +81,7 @@ function Chat({ selectedUser }) {
 
       const seenSet = new Set(messageIds.map((id) => String(id)));
 
+      // Apply read-receipt updates only to matching message ids.
       setMessages((prev) =>
         prev.map((message) =>
           seenSet.has(String(message._id))
@@ -205,6 +207,7 @@ function Chat({ selectedUser }) {
 
                 {isMe && (
                   <span className="mt-1 flex justify-end">
+                    {/* Gray single tick: sent/unseen, blue double tick: seen */}
                     {msg.seen ? (
                       <CheckCheck className="h-4 w-4 text-sky-500" />
                     ) : (

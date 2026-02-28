@@ -10,6 +10,7 @@ const getUsersForSidebar = async (req, res) => {
     const filteredUsers = await User.find({ _id: { $ne: userId } }).select(
       "-password",
     );
+    // Build unread counters grouped by sender for sidebar badges.
     const unSeenMessages = {};
     const promises = filteredUsers.map(async (user) => {
       const messsages = await Message.find({
@@ -44,6 +45,7 @@ const getMessages = async (req, res) => {
         { senderId: selectedUserId, receiverId: myId },
       ],
     });
+    // Find unseen messages from the selected user to the current user.
     const unseenMessages = await Message.find(
       { senderId: selectedUserId, receiverId: myId, seen: false },
       { _id: 1 },
@@ -52,6 +54,7 @@ const getMessages = async (req, res) => {
     if (unseenMessages.length > 0) {
       const unseenMessageIds = unseenMessages.map((message) => message._id);
 
+      // Mark all newly opened messages as seen in one DB write.
       await Message.updateMany(
         { _id: { $in: unseenMessageIds } },
         { $set: { seen: true } },
@@ -87,6 +90,7 @@ const markMessageAsSeen = async (req, res) => {
     );
 
     if (updatedMessage) {
+      // Send real-time read receipt for single-message seen updates.
       const senderSocketId = getReceiverSocketId(updatedMessage.senderId);
 
       if (senderSocketId) {

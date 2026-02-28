@@ -24,6 +24,7 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
       try {
         const { data } = await api.get("/messages/users");
         setUsers(Array.isArray(data?.users) ? data.users : []);
+        // Backend returns unread counts keyed by sender userId.
         setUnSeenMessages(data?.unSeenMessages || {});
       } catch (error) {
         console.error("Failed to load users:", error?.response?.data || error);
@@ -50,6 +51,7 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
 
       setUnSeenMessages((prev) => ({
         ...prev,
+        // Increment only for chats that are not currently active.
         [senderId]: (prev[senderId] || 0) + 1,
       }));
     };
@@ -131,6 +133,7 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
                 }`}
                 onClick={() => {
                   setSelectedUser(user);
+                  // Clear badge when user opens this chat.
                   setUnSeenMessages((prev) => ({
                     ...prev,
                     [user._id]: 0,
