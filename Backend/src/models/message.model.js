@@ -1,25 +1,36 @@
 import mongoose from "mongoose";
 
-const messageSchema = new mongoose.Schema({
-    senderId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+const messageSchema = new mongoose.Schema(
+  {
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     receiverId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref:"User"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     text: {
-        type: String,
+      type: String,
+      default: "",
+      trim: true,
     },
-    image:{
-         type: String
+    image: {
+      type: String,
+      default: "",
     },
     seen: {
-        type: Boolean,
+      type: Boolean,
+      default: false,
     },
-    
+  },
+  { timestamps: true },
+);
 
-})
+// Optimizes chat thread fetch + unread counters.
+messageSchema.index({ senderId: 1, receiverId: 1, createdAt: 1 });
+messageSchema.index({ receiverId: 1, seen: 1, senderId: 1 });
 
-export const Message = mongoose.model("Message", messageSchema)
+export const Message = mongoose.model("Message", messageSchema);

@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { jwtSecret } from "../lib/utills.lib.js";
 import { User } from "../models/user.model.js";
 
 const protectRoute = async (req, res, next) => {
@@ -10,9 +11,10 @@ const protectRoute = async (req, res, next) => {
                 message: "No token provided"
             });
         }
+        // Use shared secret source used by token generator/socket auth.
         const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRETE_KEY
+            jwtSecret
         );
         const user = await User.findById(decoded.userId)
             .select("-password");

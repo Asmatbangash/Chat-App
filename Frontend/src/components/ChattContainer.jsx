@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,15 @@ const messages = [
   { id: 3, text: "I’m good! Working on the chat app 😄", sender: "other" },
 ];
 
-function ChattContainer({selectedUser, setSelectedUser}) {
+function ChattContainer({ selectedUser }) {
   console.log(selectedUser)
   const bottomRef = useRef(null);
 
   // Auto-scroll to last message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Sample `messages` array is static here, so run only once.
+  }, []);
 
   return selectedUser ? (
     <div className="flex flex-col h-screen">

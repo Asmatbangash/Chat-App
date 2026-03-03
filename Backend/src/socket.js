@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import express from "express";
 import jwt from "jsonwebtoken";
+import { jwtSecret } from "./lib/utills.lib.js";
 
 const app = express();
 const server = createServer(app);
@@ -9,18 +10,18 @@ const server = createServer(app);
 // userId -> socketId map for direct user-to-user real-time events.
 const onlineUsers = new Map();
 
+// Keep socket CORS behavior aligned with REST CORS behavior.
 const allowedOrigins = (process.env.CORS_ORIGIN || "*")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowWildcardOrigin = allowedOrigins.length === 1 && allowedOrigins[0] === "*";
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*"
-      ? "*"
-      : allowedOrigins,
+    origin: allowWildcardOrigin ? "*" : allowedOrigins,
     methods: ["GET", "POST", "PATCH"],
-    credentials: true,
+    credentials: !allowWildcardOrigin,
   },
   transports: ["websocket", "polling"],
 });
@@ -38,7 +39,8 @@ io.use((socket, next) => {
       return next(new Error("Unauthorized: missing token"));
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRETE_KEY);
+    // Verify socket auth token with shared JWT secret config.
+    const decoded = jwt.verify(token, jwtSecret);
     socket.userId = decoded.userId;
     next();
   } catch (error) {

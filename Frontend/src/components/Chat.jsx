@@ -6,7 +6,7 @@ import { Check, CheckCheck, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { assets } from "@/assets/assets";
 
 const appendUniqueMessage = (currentMessages, incomingMessage) => {
@@ -114,14 +114,7 @@ function Chat({ selectedUser }) {
 
     setSending(true);
     try {
-      // Emit socket event for instant cross-client delivery.
-      socket?.emit("sendMessage", {
-        senderId: user._id,
-        receiverId: selectedUser._id,
-        text: trimmedMessage,
-      });
-
-      // Persist message through REST API.
+      // Persist first; backend will emit `newMessage` to receiver on success.
       const { data } = await api.post(`/messages/send-message/${selectedUser._id}`, {
         text: trimmedMessage,
       });
@@ -140,7 +133,7 @@ function Chat({ selectedUser }) {
 
   if (!selectedUser) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
+      <div className="flex h-full flex-col items-center justify-center">
         <img
           className="w-25 h-25 max-sm:w-15 max-sm:h-15"
           src={assets.logo}
@@ -152,7 +145,7 @@ function Chat({ selectedUser }) {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 p-4 border-b shrink-0">
         <Avatar>
           <AvatarImage src={selectedUser.profilePic || ""} />
@@ -175,7 +168,7 @@ function Chat({ selectedUser }) {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 pb-24">
+      <ScrollArea className="min-h-0 flex-1 p-4">
         <div className="flex flex-col gap-2">
           {loadingMessages && (
             <p className="text-sm text-muted-foreground">Loading messages...</p>
@@ -190,7 +183,7 @@ function Chat({ selectedUser }) {
             return (
               <div
                 key={msg._id || `${msg.senderId}-${msg.createdAt}`}
-                className={`px-3 py-2 rounded-lg text-sm break-words ${
+                className={`flex px-3 py-2 rounded-lg text-sm break-words ${
                   isMe
                     ? "self-end bg-primary text-primary-foreground max-w-[80%] sm:max-w-[60%]"
                     : "self-start bg-muted max-w-[80%] sm:max-w-[60%]"
@@ -224,7 +217,7 @@ function Chat({ selectedUser }) {
 
       <form
         onSubmit={handleSendMessage}
-        className="fixed bottom-0 left-0 right-0 md:left-64 lg:right-72 bg-background p-4 border-t flex items-center gap-2"
+        className="shrink-0 border-t bg-background p-4 flex items-center gap-2"
       >
         <Input
           placeholder="Type a message..."

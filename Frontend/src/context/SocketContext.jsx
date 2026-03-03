@@ -1,8 +1,7 @@
-import { createContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { connectSocket, disconnectSocket } from "@/socket/socket";
-import { useAuth } from "@/context/AuthContext";
-
-export const SocketContext = createContext(null);
+import { useAuth } from "@/hooks/useAuth";
+import SocketContext from "@/context/socket-context";
 
 export function SocketProvider({ children }) {
   const { user, token, isAuthenticated } = useAuth();
@@ -12,38 +11,46 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated || !user?._id || !token) {
       disconnectSocket();
-      setSocket(null);
-      setOnlineUsers([]);
       return;
     }
 
+    // Keep socket reference in React state only when connection is live.
     const socketInstance = connectSocket({ userId: user._id, token });
-    setSocket(socketInstance);
+    const handleConnect = () => {
+      setSocket(socketInstance);
+    };
+    const handleDisconnect = () => {
+      setSocket(null);
+      setOnlineUsers([]);
+    };
 
     const handleOnlineUsers = (users = []) => {
       setOnlineUsers(users.map((id) => String(id)));
     };
 
+    socketInstance.on("connect", handleConnect);
+    socketInstance.on("disconnect", handleDisconnect);
     // Support both backend event names.
     socketInstance.on("onlineUsers", handleOnlineUsers);
     socketInstance.on("getOnlineUsers", handleOnlineUsers);
 
     return () => {
+      socketInstance.off("connect", handleConnect);
+      socketInstance.off("disconnect", handleDisconnect);
       socketInstance.off("onlineUsers", handleOnlineUsers);
       socketInstance.off("getOnlineUsers", handleOnlineUsers);
       disconnectSocket();
-      setSocket(null);
-      setOnlineUsers([]);
     };
   }, [isAuthenticated, user?._id, token]);
 
   const value = useMemo(
     () => ({
-      socket,
-      onlineUsers,
-      isSocketConnected: Boolean(socket?.connected),
+      // Expose empty socket state when auth is missing.
+      socket: isAuthenticated ? socket : null,
+      onlineUsers: isAuthenticated ? onlineUsers : [],
+      isSocketConnected: isAuthenticated ? Boolean(socket?.connected) : false,
     }),
-    [socket, onlineUsers],
+    [isAuthenticated, socket, onlineUsers],
   );
 
   return (

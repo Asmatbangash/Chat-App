@@ -9,19 +9,25 @@ import { app, server } from "./socket.js";
 
 const port = process.env.PORT || 4000;
 
-await dbConnectioin();
+// Stop startup if DB is unavailable; API should not run in degraded mode.
+try {
+  await dbConnectioin();
+} catch (error) {
+  console.error("Failed to connect database:", error.message);
+  process.exit(1);
+}
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "*")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowWildcardOrigin = allowedOrigins.length === 1 && allowedOrigins[0] === "*";
 
 app.use(
   cors({
-    origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*"
-      ? "*"
-      : allowedOrigins,
-    credentials: true,
+    // `credentials` cannot be true when origin is wildcard.
+    origin: allowWildcardOrigin ? "*" : allowedOrigins,
+    credentials: !allowWildcardOrigin,
   }),
 );
 

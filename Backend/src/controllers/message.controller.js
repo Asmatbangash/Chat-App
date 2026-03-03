@@ -2,7 +2,7 @@ import cloudinary from "../lib/cloudinary.lib.js";
 import { Message } from "../models/message.model.js";
 import { User } from "../models/user.model.js";
 import { getReceiverSocketId, io } from "../socket.js";
-// import fs from "fs";
+import fs from "fs/promises";
 
 const getUsersForSidebar = async (req, res) => {
   const userId = req.user._id;
@@ -10,24 +10,33 @@ const getUsersForSidebar = async (req, res) => {
     const filteredUsers = await User.find({ _id: { $ne: userId } }).select(
       "-password",
     );
-    // Build unread counters grouped by sender for sidebar badges.
-    const unSeenMessages = {};
-    const promises = filteredUsers.map(async (user) => {
-      const messsages = await Message.find({
-        senderId: user._id,
-        receiverId: userId,
-        seen: false,
-      });
-      if (messsages.length > 0) {
-        unSeenMessages[user._id] = messsages.length;
-      }
-    });
-    await Promise.all(promises);
+
+    // Aggregate unread counts in one query instead of per-user lookups.
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          receiverId: userId,
+          seen: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$senderId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const unSeenMessages = unreadCounts.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+
     res
       .status(200)
       .json({ success: true, users: filteredUsers, unSeenMessages });
   } catch (error) {
-    console.log(error.messsage);
+    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -39,12 +48,13 @@ const getMessages = async (req, res) => {
   const myId = req.user._id;
   const { id: selectedUserId } = req.params;
   try {
+    // Always return chat history in ascending time order.
     const messages = await Message.find({
       $or: [
         { senderId: myId, receiverId: selectedUserId },
         { senderId: selectedUserId, receiverId: myId },
       ],
-    });
+    }).sort({ createdAt: 1 });
     // Find unseen messages from the selected user to the current user.
     const unseenMessages = await Message.find(
       { senderId: selectedUserId, receiverId: myId, seen: false },
@@ -72,7 +82,7 @@ const getMessages = async (req, res) => {
 
     res.status(200).json({ success: true, messages });
   } catch (error) {
-    console.log(error.messsage);
+    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -83,11 +93,21 @@ const getMessages = async (req, res) => {
 const markMessageAsSeen = async (req, res) => {
   const { id } = req.params;
   try {
-    const updatedMessage = await Message.findByIdAndUpdate(
-      id,
-      { seen: true },
-      { new: true },
-    );
+    const existingMessage = await Message.findById(id);
+    if (!existingMessage) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Message not found" });
+    }
+
+    // Only the receiver is allowed to mark this message as seen.
+    if (String(existingMessage.receiverId) !== String(req.user._id)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not allowed to update this message" });
+    }
+
+    const updatedMessage = await Message.findByIdAndUpdate(id, { seen: true }, { new: true });
 
     if (updatedMessage) {
       // Send real-time read receipt for single-message seen updates.
@@ -103,7 +123,7 @@ const markMessageAsSeen = async (req, res) => {
 
     res.status(200).json({ success: true, message: updatedMessage });
   } catch (error) {
-    console.log(error.messsage);
+    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -115,25 +135,30 @@ const sendMessage = async (req, res) => {
   const senderId = req.user._id;
   const { receiverId } = req.params;
   const { text } = req.body;
+  // Track temp file path so cleanup can run in finally.
+  const tempFilePath = req.file?.path;
   try {
+    const trimmedText = typeof text === "string" ? text.trim() : "";
     let imageUrl = "";
 
-    if (req.file?.path) {
-      const uploadResult = await cloudinary.uploader.upload(req.file.path);
+    if (tempFilePath) {
+      // Upload local temp image to Cloudinary first.
+      const uploadResult = await cloudinary.uploader.upload(tempFilePath);
       imageUrl = uploadResult.secure_url;
-      console.log(imageUrl);
-      // Remove temporary file after successful cloud upload.
-      // fs.unlink(req.file.path, (unlinkError) => {
-      //   if (unlinkError) {
-      //     console.log(unlinkError.message);
-      //   }
-      // });
+    }
+
+    // Prevent empty messages (no text and no image).
+    if (!trimmedText && !imageUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Message text or image is required",
+      });
     }
 
     const newMessage = await Message.create({
       senderId,
       receiverId,
-      text: text || "",
+      text: trimmedText,
       image: imageUrl,
       seen: false,
     });
@@ -150,11 +175,16 @@ const sendMessage = async (req, res) => {
       message: newMessage,
     });
   } catch (error) {
-    console.log(error.messsage);
+    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
     });
+  } finally {
+    if (tempFilePath) {
+      // Delete temp upload whether request succeeds or fails.
+      await fs.unlink(tempFilePath).catch(() => null);
+    }
   }
 };
 

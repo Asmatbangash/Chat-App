@@ -30,7 +30,7 @@ function Home() {
         </Button>
       </div>
 
-      <div className="flex flex-1 h-full relative">
+      <div className="relative flex h-full min-h-0 flex-1">
         <Sidebar
           selectedUser={selectedUser}
           setSelectedUser={setSelectedUser}
@@ -38,7 +38,7 @@ function Home() {
           onClose={() => setIsSidebarOpen(false)}
         />
 
-        <div className="flex-1 h-full min-h-screen overflow-hidden">
+        <div className="min-h-0 h-full flex-1 overflow-hidden">
           <Chat selectedUser={selectedUser} />
         </div>
 

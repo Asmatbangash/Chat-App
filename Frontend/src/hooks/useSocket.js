@@ -1,7 +1,8 @@
 import { useContext } from "react";
-import { SocketContext } from "@/context/SocketContext";
+import SocketContext from "@/context/socket-context";
 
 export function useSocket() {
+  // Pull socket state from the standalone socket context module.
   const context = useContext(SocketContext);
 
   if (!context) {

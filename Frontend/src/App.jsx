@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Home, Login, Profile, SignUp } from "@/pages";
-import { useAuth } from "@/context/AuthContext";
+// Hook import moved out of provider file for fast-refresh compatibility.
+import { useAuth } from "@/hooks/useAuth";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();

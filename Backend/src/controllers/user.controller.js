@@ -12,7 +12,9 @@ const SignUp = async (req, res) => {
         .json({ success: false, message: "missing details" });
     }
 
-    const user = await User.findOne({ email });
+    // Normalize email for consistent unique matching.
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (user) {
       return res
         .status(409)
@@ -24,16 +26,19 @@ const SignUp = async (req, res) => {
 
     const newUser = await User.create({
       FullName,
-      email,
+      email: normalizedEmail,
       password: hashPassword,
       bio,
     });
 
+    // Remove password before sending user object to client.
     const token = generateToken(newUser._id);
+    const userData = newUser.toObject();
+    delete userData.password;
 
     res.status(201).json({
       success: true,
-      userData: newUser,
+      userData,
       token,
       message: "user created successfully!",
     });
@@ -54,18 +59,35 @@ const login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "missing details" });
     }
-    const userData = await User.findOne({ email });
+    // Normalize email so login matches signup normalization.
+    const normalizedEmail = email.toLowerCase().trim();
+    const userData = await User.findOne({ email: normalizedEmail }).select(
+      "+password",
+    );
+
+    // Return early for unknown account to avoid null password compare.
+    if (!userData) {
+      return res
+        .status(401)
+        .json({ success: false, message: "invalid credentials!" });
+    }
 
     const isPasswordCorrect = await bcrypt.compare(password, userData.password);
 
+    // Return immediately on invalid password to avoid duplicate responses.
     if (!isPasswordCorrect) {
-      res.status(404).json({ success: false, message: "invalid credintail!" });
+      return res
+        .status(401)
+        .json({ success: false, message: "invalid credentials!" });
     }
     const token = generateToken(userData._id);
+    // Remove password before returning the authenticated user.
+    const safeUser = userData.toObject();
+    delete safeUser.password;
 
     res.status(200).json({
       success: true,
-      userData,
+      userData: safeUser,
       token,
       message: "user login successfully!",
     });
@@ -81,7 +103,7 @@ const login = async (req, res) => {
 const checkAuth = async (req, res) => {
   res.status(200).json({
     success: true,
-    user: req.user
+    user: req.user,
   });
 };
 
@@ -110,7 +132,7 @@ const updateUserProfile = async (req, res) => {
       .json({
         success: true,
         user: updateUser,
-        messsage: "profile update successfully!",
+        message: "profile update successfully!",
       });
   } catch (error) {
     console.log(error.message);
