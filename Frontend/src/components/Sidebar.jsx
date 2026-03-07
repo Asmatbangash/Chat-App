@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
   const navigate = useNavigate();
   const { onlineUsers, socket } = useSocket();
-  const { logout } = useAuth();
+  const { user: currentUser, logout } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [unSeenMessages, setUnSeenMessages] = useState({});
@@ -171,6 +171,33 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
             );
           })}
         </ScrollArea>
+
+        {/* User Profile Section at Bottom */}
+        <div className="border-t p-4 mt-auto">
+          <div 
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition"
+            onClick={() => {
+              navigate("/profile");
+              onClose?.();
+            }}
+          >
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={currentUser?.profilePic || ""} />
+              <AvatarFallback>
+                {(currentUser?.FullName || "U").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 overflow-hidden">
+              <p className="font-medium text-sm truncate">
+                {currentUser?.FullName || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {currentUser?.email || ""}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
