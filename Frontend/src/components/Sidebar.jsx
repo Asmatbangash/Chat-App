@@ -84,118 +84,154 @@ function Sidebar({ selectedUser, setSelectedUser, isOpen, onClose }) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
 
       <div
         className={`
-          fixed top-0 left-0 h-full w-64 bg-background border-r shadow-md
+          fixed top-0 left-0 h-full w-72 bg-card border-r border-border shadow-xl
           z-50 transform transition-transform flex flex-col
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          md:static md:translate-x-0
+          md:static md:translate-x-0 md:w-80
         `}
       >
-        <div className="p-4 border-b flex items-center justify-between">
-          <h2 className="text-xl font-semibold hidden md:block">Chats</h2>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
+        <div className="px-4 py-5 border-b bg-gradient-to-r from-primary/5 to-primary/10 flex items-center justify-between">
+          <h2 className="text-xl font-bold hidden md:block">Messages</h2>
+          <h2 className="text-lg font-bold md:hidden">Chats</h2>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout}
+            className="gap-2 shadow-sm hover:shadow-md transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
             Logout
           </Button>
         </div>
 
-        <div className="p-4">
-          <Input
-            placeholder="Search users..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+        <div className="p-4 bg-muted/30">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <Input
+              placeholder="Search conversations..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="pl-10 h-10 bg-background"
+            />
+          </div>
         </div>
 
         <ScrollArea className="flex-1 px-2 min-h-0">
           {loadingUsers && (
-            <p className="px-3 text-sm text-muted-foreground">Loading users...</p>
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span className="text-sm">Loading...</span>
+              </div>
+            </div>
           )}
 
           {!loadingUsers && filteredUsers.length === 0 && (
-            <p className="px-3 text-sm text-muted-foreground">No users found.</p>
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">No users found</p>
+            </div>
           )}
 
-          {filteredUsers.map((user) => {
-            const isOnline = onlineUsers.includes(String(user._id));
-            const isSelected = selectedUser?._id === user._id;
-            const unreadCount = unSeenMessages[user._id] || 0;
+          <div className="space-y-1 py-2">
+            {filteredUsers.map((user) => {
+              const isOnline = onlineUsers.includes(String(user._id));
+              const isSelected = selectedUser?._id === user._id;
+              const unreadCount = unSeenMessages[user._id] || 0;
 
-            return (
-              <div
-                key={user._id}
-                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${
-                  isSelected ? "bg-muted" : "hover:bg-muted"
-                }`}
-                onClick={() => {
-                  setSelectedUser(user);
-                  // Clear badge when user opens this chat.
-                  setUnSeenMessages((prev) => ({
-                    ...prev,
-                    [user._id]: 0,
-                  }));
-                  onClose?.();
-                }}
-              >
-                <div className="relative">
-                  <Avatar>
-                    <AvatarImage src={user.profilePic || ""} />
-                    <AvatarFallback>
-                      {(user.FullName || "U").charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+              return (
+                <div
+                  key={user._id}
+                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                    isSelected 
+                      ? "bg-primary/10 border border-primary/20 shadow-sm" 
+                      : "hover:bg-muted/50"
+                  }`}
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setUnSeenMessages((prev) => ({
+                      ...prev,
+                      [user._id]: 0,
+                    }));
+                    onClose?.();
+                  }}
+                >
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="ring-2 ring-background">
+                      <AvatarImage src={user.profilePic || ""} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {(user.FullName || "U").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  {isOnline && (
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                    {isOnline && (
+                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-card shadow-sm" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold truncate text-sm">{user.FullName}</p>
+                    <p className={`text-xs truncate ${isOnline ? 'text-green-600 dark:text-green-400 font-medium' : 'text-muted-foreground'}`}>
+                      {isOnline ? "Online" : "Offline"}
+                    </p>
+                  </div>
+
+                  {unreadCount > 0 && (
+                    <span className="min-w-6 h-6 px-2 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-sm">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
                   )}
                 </div>
-
-                <div className="flex-1 overflow-hidden">
-                  <p className="font-medium truncate">{user.FullName}</p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {isOnline ? "Online" : "Offline"}
-                  </p>
-                </div>
-
-                {unreadCount > 0 && (
-                  <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </ScrollArea>
 
-        {/* User Profile Section at Bottom */}
-        <div className="border-t p-4 mt-auto">
+        <div className="border-t p-3 mt-auto bg-muted/30">
           <div 
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition"
+            className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/70 cursor-pointer transition-all group"
             onClick={() => {
               navigate("/profile");
               onClose?.();
             }}
           >
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-11 w-11 ring-2 ring-background">
               <AvatarImage src={currentUser?.profilePic || ""} />
-              <AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                 {(currentUser?.FullName || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             
             <div className="flex-1 overflow-hidden">
-              <p className="font-medium text-sm truncate">
+              <p className="font-semibold text-sm truncate">
                 {currentUser?.FullName || "User"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {currentUser?.email || ""}
+                View Profile
               </p>
             </div>
+
+            <svg className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </div>
       </div>
