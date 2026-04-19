@@ -188,4 +188,100 @@ const sendMessage = async (req, res) => {
   }
 };
 
-export { getUsersForSidebar, getMessages, markMessageAsSeen, sendMessage };
+const editMessage = async (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const message = await Message.findById(id);
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+
+    // Only the sender can edit their own message.
+    if (String(message.senderId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: "Not allowed to edit this message" });
+    }
+
+    const trimmedText = typeof text === "string" ? text.trim() : "";
+    if (!trimmedText) {
+      return res.status(400).json({ success: false, message: "Message text cannot be empty" });
+    }
+
+    message.text = trimmedText;
+    message.isEdited = true;
+    await message.save();
+
+    // Notify receiver in real-time about the edit.
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageEdited", {
+        _id: message._id,
+        text: message.text,
+        isEdited: true,
+      });
+    }
+
+    res.status(200).json({ success: true, message });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const deleteMessage = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  try {
+    const message = await Message.findById(id);
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+
+    // Only the sender can delete their own message.
+    if (String(message.senderId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: "Not allowed to delete this message" });
+    }
+
+    // Already deleted — idempotent.
+    if (message.isDeleted) {
+      return res.status(200).json({ success: true, message });
+    }
+
+    // Remove image from Cloudinary before clearing the URL.
+    if (message.image) {
+      try {
+        const urlParts = message.image.split("/");
+        const publicIdWithExt = urlParts[urlParts.length - 1];
+        const publicId = publicIdWithExt.split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cloudinaryError) {
+        console.warn("Failed to delete image from Cloudinary:", cloudinaryError.message);
+      }
+    }
+
+    // Soft-delete: keep the record but wipe content.
+    message.isDeleted = true;
+    message.text = "";
+    message.image = "";
+    message.isEdited = false;
+    await message.save();
+
+    // Notify receiver so they can render the "deleted" placeholder.
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageDeleted", { _id: message._id });
+    }
+
+    res.status(200).json({ success: true, message });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { getUsersForSidebar, getMessages, markMessageAsSeen, sendMessage, editMessage, deleteMessage };

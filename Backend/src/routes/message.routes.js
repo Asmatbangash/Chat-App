@@ -5,7 +5,9 @@ import {
   getMessages, 
   getUsersForSidebar, 
   markMessageAsSeen, 
-  sendMessage 
+  sendMessage,
+  editMessage,
+  deleteMessage,
 } from '../controllers/message.controller.js'
 
 const messageRouter = express.Router()
@@ -26,5 +28,11 @@ messageRouter.post(
   upload.single("image"),
   sendMessage
 )
+
+// Edit a message (sender only)
+messageRouter.put("/edit/:id", protectRoute, editMessage)
+
+// Delete a message (sender only)
+messageRouter.delete("/delete/:id", protectRoute, deleteMessage)
 
 export default messageRouter
